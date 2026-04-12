@@ -1,0 +1,12 @@
+# GraphQL schema for KTravels Public Site API
+# This is the base schema - features will extend with their types
+
+type Query {
+  health: String!
+}
+
+type Mutation {
+  noop: Boolean!
+}
+
+scalar Time

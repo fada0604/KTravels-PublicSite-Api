@@ -1,0 +1,24 @@
+# gqlgen configuration
+# For more information about gqlgen, see https://gqlgen.com/
+
+schema:
+  - graph/schema.graphqls
+
+exec:
+  filename: graph/generated.go
+  package: graph
+
+model:
+  filename: graph/model.go
+  package: graph
+
+resolver:
+  filename: graph/resolver.go
+  package: graph
+  layout: single-file
+
+autobind: ""
+
+models:
+  Time:
+    model: github.com/99designs/gqlgen/graphql.Time
