@@ -12,7 +12,8 @@ type Config struct {
 	App      AppConfig      `mapstructure:"app"`
 	Database DatabaseConfig `mapstructure:"database"`
 	GraphQL  GraphQLConfig  `mapstructure:"graphql"`
-	Logger   LoggerConfig   `mapstructure:"logger"`
+	Logger   LoggerConfig  `mapstructure:"logger"`
+	RabbitMQ RabbitMQConfig `mapstructure:"rabbitmq"`
 }
 
 type AppConfig struct {
@@ -36,6 +37,13 @@ type LoggerConfig struct {
 	Format string `mapstructure:"format"`
 }
 
+type RabbitMQConfig struct {
+	HostName string `mapstructure:"hostname"`
+	UserName string `mapstructure:"username"`
+	Password string `mapstructure:"password"`
+	Port    int    `mapstructure:"port"`
+}
+
 func Load() (*Config, error) {
 	v := viper.New()
 
@@ -55,6 +63,11 @@ func Load() (*Config, error) {
 
 	v.SetDefault("logger.level", "info")
 	v.SetDefault("logger.format", "json")
+
+	v.SetDefault("rabbitmq.hostname", "localhost")
+	v.SetDefault("rabbitmq.username", "guest")
+	v.SetDefault("rabbitmq.password", "guest")
+	v.SetDefault("rabbitmq.port", 5672)
 
 	var cfg Config
 	if err := v.Unmarshal(&cfg); err != nil {

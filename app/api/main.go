@@ -23,7 +23,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	log, err := logger.New(cfg.Logger.Level, cfg.Logger.Format)
+	log, err := logger.New(cfg.App.Name, cfg.Logger.Level, cfg.Logger.Format)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "failed to initialize logger: %v\n", err)
 		os.Exit(1)
@@ -31,12 +31,12 @@ func main() {
 
 	db, err := database.New(ctx, cfg.Database.URI, cfg.Database.Database)
 	if err != nil {
-		log.Error().Msgf("failed to connect to database: %v", err)
+		log.Error().Err(err).Str("operation", "Database.Connect").Msg("failed to connect to database")
 		os.Exit(1)
 	}
 	defer db.Close(ctx)
 
-	log.Info().Msgf("starting %s in %s mode", cfg.App.Name, cfg.App.Env)
+	log.Info().Str("operation", "App.Start").Str("environment", cfg.App.Env).Msg("starting application")
 
 	addr := fmt.Sprintf(":%d", cfg.App.Port)
 	server := &http.Server{
@@ -56,17 +56,17 @@ func main() {
 
 	select {
 	case err := <-errChan:
-		log.Error().Msgf("server error: %v", err)
+		log.Error().Err(err).Str("operation", "HTTP.ListenAndServe").Msg("server error")
 	case sig := <-sigChan:
-		log.Info().Msgf("received signal: %v", sig)
+		log.Info().Str("operation", "App.Signal").Str("signal", sig.String()).Msg("received signal")
 	}
 
-	log.Info().Msg("shutting down server")
+	log.Info().Str("operation", "HTTP.Shutdown").Msg("shutting down server")
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 
 	if err := server.Shutdown(ctx); err != nil {
-		log.Error().Msgf("server shutdown error: %v", err)
+		log.Error().Err(err).Str("operation", "HTTP.Shutdown").Msg("server shutdown error")
 	}
 
 	_ = db

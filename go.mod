@@ -3,6 +3,7 @@ module ktravels-publicsite-api
 go 1.26.2
 
 require (
+	github.com/rabbitmq/amqp091-go v1.9.0
 	github.com/rs/zerolog v1.35.0
 	github.com/spf13/viper v1.21.0
 	go.mongodb.org/mongo-driver v1.17.9

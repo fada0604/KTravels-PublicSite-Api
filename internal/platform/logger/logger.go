@@ -12,10 +12,14 @@ type Logger struct {
 	log zerolog.Logger
 }
 
-func New(level, format string) (*Logger, error) {
+func New(service, level, format string) (*Logger, error) {
 	lvl, err := zerolog.ParseLevel(level)
 	if err != nil {
 		lvl = zerolog.InfoLevel
+	}
+
+	if service == "" {
+		service = "ktravels-publicsite-api"
 	}
 
 	var output io.Writer = os.Stdout
@@ -26,6 +30,7 @@ func New(level, format string) (*Logger, error) {
 	log := zerolog.New(output).
 		Level(lvl).
 		With().
+		Str("service", service).
 		Timestamp().
 		Caller().
 		Logger()
