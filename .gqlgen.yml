@@ -17,7 +17,7 @@ resolver:
   package: graph
   layout: single-file
 
-autobind: ""
+autobind: []
 
 models:
   Time:

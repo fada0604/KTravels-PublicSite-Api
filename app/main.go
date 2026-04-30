@@ -12,6 +12,11 @@ import (
 	"ktravels-publicsite-api/internal/platform/config"
 	"ktravels-publicsite-api/internal/platform/database"
 	"ktravels-publicsite-api/internal/platform/logger"
+	rmq "ktravels-publicsite-api/internal/platform/rabbitmq"
+
+	psapp "ktravels-publicsite-api/internal/features/provider_service/application"
+	psinfra "ktravels-publicsite-api/internal/features/provider_service/infrastructure"
+	psrmq "ktravels-publicsite-api/internal/features/provider_service/delivery/rabbitmq"
 )
 
 func main() {
@@ -35,6 +40,29 @@ func main() {
 		os.Exit(1)
 	}
 	defer db.Close(ctx)
+
+	rabbitClient, err := rmq.New(rmq.Config{
+		HostName: cfg.RabbitMQ.HostName,
+		UserName: cfg.RabbitMQ.UserName,
+		Password: cfg.RabbitMQ.Password,
+		Port:     cfg.RabbitMQ.Port,
+	})
+	if err != nil {
+		log.Error().Err(err).Str("operation", "RabbitMQ.Connect").Msg("failed to connect to RabbitMQ")
+		os.Exit(1)
+	}
+	defer rabbitClient.Close()
+
+	repo := psinfra.NewMongoRepository(db.Database())
+
+	handler := func(ctx context.Context, body []byte) error {
+		return psapp.HandlePublished(ctx, repo, body)
+	}
+
+	if err := psrmq.SetupAndConsume(ctx, rabbitClient, handler, log); err != nil {
+		log.Error().Err(err).Str("operation", "RabbitMQ.Consume").Msg("failed to setup consumer")
+		os.Exit(1)
+	}
 
 	log.Info().Str("operation", "App.Start").Str("environment", cfg.App.Env).Msg("starting application")
 
@@ -62,12 +90,10 @@ func main() {
 	}
 
 	log.Info().Str("operation", "HTTP.Shutdown").Msg("shutting down server")
-	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	shutdownCtx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 
-	if err := server.Shutdown(ctx); err != nil {
+	if err := server.Shutdown(shutdownCtx); err != nil {
 		log.Error().Err(err).Str("operation", "HTTP.Shutdown").Msg("server shutdown error")
 	}
-
-	_ = db
 }

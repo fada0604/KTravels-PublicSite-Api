@@ -122,6 +122,54 @@ func (c *Client) Publish(ctx context.Context, exchange, routingKey string, body 
 	)
 }
 
+func (c *Client) DeclareTopicExchange(name string) error {
+	return c.channel.ExchangeDeclare(
+		name,
+		"topic",
+		true,
+		false,
+		false,
+		false,
+		nil,
+	)
+}
+
+// ExchangeDeclarePassive verifies that an exchange already exists without
+// attempting to create or modify it. Useful when the exchange is owned by
+// another service (e.g. Backoffice) and this service only needs to bind to it.
+func (c *Client) ExchangeDeclarePassive(name string) error {
+	return c.channel.ExchangeDeclarePassive(
+		name,
+		"",
+		true,
+		false,
+		false,
+		false,
+		nil,
+	)
+}
+
+func (c *Client) DeclareQueue(name string) (amqp.Queue, error) {
+	return c.channel.QueueDeclare(
+		name,
+		true,
+		false,
+		false,
+		false,
+		nil,
+	)
+}
+
+func (c *Client) BindQueue(queue, exchange, routingKey string) error {
+	return c.channel.QueueBind(
+		queue,
+		routingKey,
+		exchange,
+		false,
+		nil,
+	)
+}
+
 func (c *Client) Close() error {
 	if c.channel != nil {
 		c.channel.Close()
