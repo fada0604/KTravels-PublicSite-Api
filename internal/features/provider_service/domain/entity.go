@@ -3,6 +3,7 @@ package domain
 type ProviderService struct {
 	ID                       string                    `json:"provider_service_id" bson:"_id"`
 	ProviderID               string                    `json:"provider_id" bson:"provider_id"`
+	Status                   int                       `json:"status" bson:"status"`
 	Title                    string                    `json:"title" bson:"title"`
 	ProviderName             string                    `json:"provider_name" bson:"provider_name"`
 	Category                 Category                  `json:"category" bson:"category"`

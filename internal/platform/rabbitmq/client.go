@@ -134,14 +134,13 @@ func (c *Client) DeclareTopicExchange(name string) error {
 	)
 }
 
-// ExchangeDeclarePassive verifies that an exchange already exists without
-// attempting to create or modify it. Useful when the exchange is owned by
-// another service (e.g. Backoffice) and this service only needs to bind to it.
-func (c *Client) ExchangeDeclarePassive(name string) error {
-	return c.channel.ExchangeDeclarePassive(
+// DeclareDirectExchange declares (or verifies) a durable direct exchange.
+// Safe to call when the exchange already exists with the same type and args.
+func (c *Client) DeclareDirectExchange(name string) error {
+	return c.channel.ExchangeDeclare(
 		name,
-		"",
-		true,
+		"direct",
+		false, // non-durable — matches Backoffice declaration
 		false,
 		false,
 		false,

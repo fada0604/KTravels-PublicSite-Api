@@ -12,34 +12,34 @@ import (
 )
 
 const (
-	exchangeName = "ktravels.backoffice.api.exchange"
-	queueName    = "provider_service_published"
-	routingKey   = "ktravels.backoffice.api.routing.key"
+	EXCHANGE_NAME = "ktravels.backoffice.api.exchange"
+	QUEUE_NAME    = "provider_service_published"
+	ROUTING_KEY   = "ktravels.backoffice.api.routing.key"
 )
 
 type Handler func(ctx context.Context, body []byte) error
 
 func SetupAndConsume(ctx context.Context, client *rabbitmqclient.Client, handler Handler, log *logger.Logger) error {
-	if err := client.ExchangeDeclarePassive(exchangeName); err != nil {
-		return fmt.Errorf("exchange %s does not exist or is unreachable: %w", exchangeName, err)
+	if err := client.DeclareDirectExchange(EXCHANGE_NAME); err != nil {
+		return fmt.Errorf("failed to declare exchange %s: %w", EXCHANGE_NAME, err)
 	}
 
-	q, err := client.DeclareQueue(queueName)
+	q, err := client.DeclareQueue(QUEUE_NAME)
 	if err != nil {
-		return fmt.Errorf("failed to declare queue %s: %w", queueName, err)
+		return fmt.Errorf("failed to declare queue %s: %w", QUEUE_NAME, err)
 	}
 
-	if err := client.BindQueue(q.Name, exchangeName, routingKey); err != nil {
-		return fmt.Errorf("failed to bind queue %s: %w", queueName, err)
+	if err := client.BindQueue(q.Name, EXCHANGE_NAME, ROUTING_KEY); err != nil {
+		return fmt.Errorf("failed to bind queue %s: %w", QUEUE_NAME, err)
 	}
 
 	log.Info().
-		Str("exchange", exchangeName).
-		Str("queue", queueName).
-		Str("routingKey", routingKey).
+		Str("exchange", EXCHANGE_NAME).
+		Str("queue", QUEUE_NAME).
+		Str("routingKey", ROUTING_KEY).
 		Msg("RabbitMQ consumer setup complete, starting consume")
 
-	return client.Consume(ctx, queueName, func(msg amqp.Delivery) {
+	return client.Consume(ctx, QUEUE_NAME, func(msg amqp.Delivery) {
 		msgCtx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 		defer cancel()
 
