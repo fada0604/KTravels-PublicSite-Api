@@ -2,6 +2,7 @@ package infrastructure
 
 import (
 	"context"
+	"fmt"
 
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
@@ -43,7 +44,7 @@ func (r *MongoRepository) UpdateStatus(ctx context.Context, id string, status in
 
 	_, err := r.collection.UpdateOne(ctx, filter, update)
 	if err != nil {
-		return err
+		return fmt.Errorf("update error: %w", err)
 	}
 
 	return nil

@@ -59,7 +59,7 @@ func main() {
 		return psapp.HandlePublished(ctx, repo, body)
 	}
 
-	if err := psrmq.SetupAndConsume(ctx, rabbitClient, publishedHandler, psrmq.PublishedQueueName, log); err != nil {
+	if err := psrmq.SetupAndConsume(ctx, rabbitClient, publishedHandler, psrmq.PublishedQueueName, psrmq.PublishedRoutingKey, log); err != nil {
 		log.Error().Err(err).Str("operation", "RabbitMQ.Consume.Published").Msg("failed to setup consumer")
 		os.Exit(1)
 	}
@@ -68,7 +68,7 @@ func main() {
 		return psapp.HandleUnpublished(ctx, repo, body)
 	}
 
-	if err := psrmq.SetupAndConsume(ctx, rabbitClient, unpublishedHandler, psrmq.UnpublishedQueueName, log); err != nil {
+	if err := psrmq.SetupAndConsume(ctx, rabbitClient, unpublishedHandler, psrmq.UnpublishedQueueName, psrmq.UnpublishedRoutingKey, log); err != nil {
 		log.Error().Err(err).Str("operation", "RabbitMQ.Consume.Unpublished").Msg("failed to setup consumer")
 		os.Exit(1)
 	}

@@ -13,17 +13,19 @@ import (
 
 const (
 	EXCHANGE_NAME = "ktravels.backoffice.api.exchange"
-	ROUTING_KEY   = "ktravels.backoffice.api.routing.key"
 )
 
 const (
 	PublishedQueueName   = "provider_service_published"
+	PublishedRoutingKey  = "provider_service_published"
+
 	UnpublishedQueueName = "provider_service_unpublished"
+	UnpublishedRoutingKey = "provider_service_unpublished"
 )
 
 type Handler func(ctx context.Context, body []byte) error
 
-func SetupAndConsume(ctx context.Context, client *rabbitmqclient.Client, handler Handler, queueName string, log *logger.Logger) error {
+func SetupAndConsume(ctx context.Context, client *rabbitmqclient.Client, handler Handler, queueName string, routingKey string, log *logger.Logger) error {
 	if err := client.DeclareDirectExchange(EXCHANGE_NAME); err != nil {
 		return fmt.Errorf("failed to declare exchange %s: %w", EXCHANGE_NAME, err)
 	}
@@ -33,14 +35,14 @@ func SetupAndConsume(ctx context.Context, client *rabbitmqclient.Client, handler
 		return fmt.Errorf("failed to declare queue %s: %w", queueName, err)
 	}
 
-	if err := client.BindQueue(q.Name, EXCHANGE_NAME, ROUTING_KEY); err != nil {
+	if err := client.BindQueue(q.Name, EXCHANGE_NAME, routingKey); err != nil {
 		return fmt.Errorf("failed to bind queue %s: %w", queueName, err)
 	}
 
 	log.Info().
 		Str("exchange", EXCHANGE_NAME).
 		Str("queue", queueName).
-		Str("routingKey", ROUTING_KEY).
+		Str("routingKey", routingKey).
 		Msg("RabbitMQ consumer setup complete, starting consume")
 
 	return client.Consume(ctx, queueName, func(msg amqp.Delivery) {
