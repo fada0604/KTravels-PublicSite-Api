@@ -32,3 +32,19 @@ func (r *MongoRepository) Upsert(ctx context.Context, service *domain.ProviderSe
 
 	return nil
 }
+
+func (r *MongoRepository) UpdateStatus(ctx context.Context, id string, status int) error {
+	filter := map[string]interface{}{"_id": id}
+	update := map[string]interface{}{
+		"$set": map[string]interface{}{
+			"status": status,
+		},
+	}
+
+	_, err := r.collection.UpdateOne(ctx, filter, update)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}

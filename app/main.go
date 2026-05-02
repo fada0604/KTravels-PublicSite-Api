@@ -55,12 +55,21 @@ func main() {
 
 	repo := psinfra.NewMongoRepository(db.Database())
 
-	handler := func(ctx context.Context, body []byte) error {
+	publishedHandler := func(ctx context.Context, body []byte) error {
 		return psapp.HandlePublished(ctx, repo, body)
 	}
 
-	if err := psrmq.SetupAndConsume(ctx, rabbitClient, handler, log); err != nil {
-		log.Error().Err(err).Str("operation", "RabbitMQ.Consume").Msg("failed to setup consumer")
+	if err := psrmq.SetupAndConsume(ctx, rabbitClient, publishedHandler, psrmq.PublishedQueueName, log); err != nil {
+		log.Error().Err(err).Str("operation", "RabbitMQ.Consume.Published").Msg("failed to setup consumer")
+		os.Exit(1)
+	}
+
+	unpublishedHandler := func(ctx context.Context, body []byte) error {
+		return psapp.HandleUnpublished(ctx, repo, body)
+	}
+
+	if err := psrmq.SetupAndConsume(ctx, rabbitClient, unpublishedHandler, psrmq.UnpublishedQueueName, log); err != nil {
+		log.Error().Err(err).Str("operation", "RabbitMQ.Consume.Unpublished").Msg("failed to setup consumer")
 		os.Exit(1)
 	}
 

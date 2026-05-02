@@ -23,6 +23,11 @@ func (m *mockRepo) Upsert(ctx context.Context, service *domain.ProviderService) 
 	return args.Error(0)
 }
 
+func (m *mockRepo) UpdateStatus(ctx context.Context, id string, status int) error {
+	args := m.Called(ctx, id, status)
+	return args.Error(0)
+}
+
 func buildMessage(data *domain.ProviderService) []byte {
 	dataJSON, _ := json.Marshal(data)
 	msg := map[string]interface{}{
