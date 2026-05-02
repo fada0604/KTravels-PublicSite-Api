@@ -73,6 +73,15 @@ func main() {
 		os.Exit(1)
 	}
 
+	updatedHandler := func(ctx context.Context, body []byte) error {
+		return psapp.HandleUpdated(ctx, repo, body)
+	}
+
+	if err := psrmq.SetupAndConsume(ctx, rabbitClient, updatedHandler, psrmq.UpdatedQueueName, psrmq.UpdatedRoutingKey, log); err != nil {
+		log.Error().Err(err).Str("operation", "RabbitMQ.Consume.Updated").Msg("failed to setup consumer")
+		os.Exit(1)
+	}
+
 	log.Info().Str("operation", "App.Start").Str("environment", cfg.App.Env).Msg("starting application")
 
 	addr := fmt.Sprintf(":%d", cfg.App.Port)

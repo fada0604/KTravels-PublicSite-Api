@@ -21,6 +21,9 @@ const (
 
 	UnpublishedQueueName = "provider_service_unpublished"
 	UnpublishedRoutingKey = "provider_service_unpublished"
+
+	UpdatedQueueName   = "provider_service_updated"
+	UpdatedRoutingKey  = "provider_service_updated"
 )
 
 type Handler func(ctx context.Context, body []byte) error

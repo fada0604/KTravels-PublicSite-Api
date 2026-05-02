@@ -3,6 +3,7 @@ package infrastructure
 import (
 	"context"
 	"fmt"
+	"log"
 
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
@@ -28,6 +29,7 @@ func (r *MongoRepository) Upsert(ctx context.Context, service *domain.ProviderSe
 
 	_, err := r.collection.ReplaceOne(ctx, filter, service, opts)
 	if err != nil {
+		log.Printf("Failed to upsert %s: %v", service.ID, err)
 		return err
 	}
 
