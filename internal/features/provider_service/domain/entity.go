@@ -6,6 +6,7 @@ type ProviderService struct {
 	Status                   int                       `json:"status" bson:"status"`
 	Title                    string                    `json:"title" bson:"title"`
 	ProviderName             string                    `json:"provider_name" bson:"provider_name"`
+	ProviderLogo             *Image                    `json:"provider_logo" bson:"provider_logo"`
 	Category                 Category                  `json:"category" bson:"category"`
 	SubCategory              SubCategory               `json:"sub_category" bson:"sub_category"`
 	Attributes               []Attribute               `json:"attributes" bson:"attributes"`

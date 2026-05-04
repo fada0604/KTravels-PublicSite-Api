@@ -24,6 +24,9 @@ const (
 
 	UpdatedQueueName   = "provider_service_updated"
 	UpdatedRoutingKey  = "provider_service_updated"
+
+	MediaUploadedQueueName  = "media_uploaded"
+	MediaUploadedRoutingKey = "media_uploaded"
 )
 
 type Handler func(ctx context.Context, body []byte) error

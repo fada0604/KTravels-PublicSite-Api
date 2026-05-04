@@ -28,6 +28,16 @@ func (m *mockRepo) UpdateStatus(ctx context.Context, id string, status int) erro
 	return args.Error(0)
 }
 
+func (m *mockRepo) UpdateProviderLogo(ctx context.Context, providerID string, logo *domain.Image) error {
+	args := m.Called(ctx, providerID, logo)
+	return args.Error(0)
+}
+
+func (m *mockRepo) UpdateUnitImages(ctx context.Context, unitID string, images []domain.Image) error {
+	args := m.Called(ctx, unitID, images)
+	return args.Error(0)
+}
+
 func buildMessage(data *domain.ProviderService) []byte {
 	dataJSON, _ := json.Marshal(data)
 	msg := map[string]interface{}{
