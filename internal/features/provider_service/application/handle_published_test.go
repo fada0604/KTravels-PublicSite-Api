@@ -38,6 +38,11 @@ func (m *mockRepo) UpdateUnitImages(ctx context.Context, unitID string, images [
 	return args.Error(0)
 }
 
+func (m *mockRepo) Delete(ctx context.Context, id string) error {
+	args := m.Called(ctx, id)
+	return args.Error(0)
+}
+
 func buildMessage(data *domain.ProviderService) []byte {
 	dataJSON, _ := json.Marshal(data)
 	msg := map[string]interface{}{

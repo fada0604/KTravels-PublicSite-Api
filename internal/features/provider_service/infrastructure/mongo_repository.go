@@ -104,3 +104,14 @@ func (r *MongoRepository) UpdateUnitImages(ctx context.Context, unitID string, i
 
 	return nil
 }
+
+func (r *MongoRepository) Delete(ctx context.Context, id string) error {
+	filter := bson.M{"_id": id}
+
+	_, err := r.collection.DeleteOne(ctx, filter)
+	if err != nil {
+		return fmt.Errorf("failed to delete provider service %s: %w", id, err)
+	}
+
+	return nil
+}

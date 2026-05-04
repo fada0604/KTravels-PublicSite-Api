@@ -91,6 +91,15 @@ func main() {
 		os.Exit(1)
 	}
 
+	deletedHandler := func(ctx context.Context, body []byte) error {
+		return psapp.HandleDeleted(ctx, repo, body)
+	}
+
+	if err := psrmq.SetupAndConsume(ctx, rabbitClient, deletedHandler, psrmq.DeletedQueueName, psrmq.DeletedRoutingKey, log); err != nil {
+		log.Error().Err(err).Str("operation", "RabbitMQ.Consume.Deleted").Msg("failed to setup consumer")
+		os.Exit(1)
+	}
+
 	log.Info().Str("operation", "App.Start").Str("environment", cfg.App.Env).Msg("starting application")
 
 	addr := fmt.Sprintf(":%d", cfg.App.Port)

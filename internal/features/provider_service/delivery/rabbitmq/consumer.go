@@ -27,6 +27,9 @@ const (
 
 	MediaUploadedQueueName  = "media_uploaded"
 	MediaUploadedRoutingKey = "media_uploaded"
+
+	DeletedQueueName   = "provider_service_deleted"
+	DeletedRoutingKey = "provider_service_deleted"
 )
 
 type Handler func(ctx context.Context, body []byte) error
@@ -45,11 +48,11 @@ func SetupAndConsume(ctx context.Context, client *rabbitmqclient.Client, handler
 		return fmt.Errorf("failed to bind queue %s: %w", queueName, err)
 	}
 
-	log.Info().
-		Str("exchange", EXCHANGE_NAME).
-		Str("queue", queueName).
-		Str("routingKey", routingKey).
-		Msg("RabbitMQ consumer setup complete, starting consume")
+	// log.Info().
+	// 	Str("exchange", EXCHANGE_NAME).
+	// 	Str("queue", queueName).
+	// 	Str("routingKey", routingKey).
+	// 	Msg("RabbitMQ consumer setup complete, starting consume")
 
 	return client.Consume(ctx, queueName, func(msg amqp.Delivery) {
 		msgCtx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
