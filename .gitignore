@@ -33,6 +33,8 @@ graph/generated.go
 # IA folders and files
 .opencode/
 openspec/
-.agents/
 .agent/
+.agents/
 .claude/
+.kiro/
+.github/
