@@ -3,6 +3,7 @@
 
 schema:
   - graph/schema.graphqls
+  - internal/features/exchange_rate/delivery/graphql/schema.graphqls
 
 exec:
   filename: graph/generated.go

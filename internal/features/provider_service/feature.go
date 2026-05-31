@@ -10,6 +10,7 @@ import (
 	psapp "ktravels-publicsite-api/internal/features/provider_service/application"
 	psrmq "ktravels-publicsite-api/internal/features/provider_service/delivery/rabbitmq"
 	psinfra "ktravels-publicsite-api/internal/features/provider_service/infrastructure"
+	sharedrabbitmq "ktravels-publicsite-api/internal/shared/rabbitmq"
 )
 
 type providerServiceFeature struct {
@@ -25,7 +26,7 @@ func (f *providerServiceFeature) Register(ctx context.Context, deps features.Dep
 	repo := psinfra.NewMongoRepository(f.db)
 
 	type consumer struct {
-		handler    psrmq.Handler
+		handler    sharedrabbitmq.Handler
 		queueName  string
 		routingKey string
 		op         string
@@ -65,7 +66,7 @@ func (f *providerServiceFeature) Register(ctx context.Context, deps features.Dep
 	}
 
 	for _, c := range consumers {
-		if err := psrmq.SetupAndConsume(ctx, deps.RabbitMQ, c.handler, c.queueName, c.routingKey, deps.Log); err != nil {
+		if err := sharedrabbitmq.SetupAndConsume(ctx, deps.RabbitMQ, c.handler, c.queueName, c.routingKey, deps.Log); err != nil {
 			return fmt.Errorf("%s: %w", c.op, err)
 		}
 	}

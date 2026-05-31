@@ -1,0 +1,19 @@
+extend type Query {
+  exchangeRates(page: Int, pageSize: Int): ExchangeRatePage!
+}
+
+type ExchangeRate {
+  id: String!
+  currencyFrom: String!
+  currencyTo: String!
+  rate: Float!
+  source: String!
+  validFrom: Time!
+  timestamp: Time!
+}
+
+type ExchangeRatePage {
+  items: [ExchangeRate!]!
+  totalCount: Int!
+  hasNextPage: Boolean!
+}

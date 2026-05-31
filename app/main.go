@@ -17,7 +17,13 @@ import (
 	"ktravels-publicsite-api/internal/platform/logger"
 	rmq "ktravels-publicsite-api/internal/platform/rabbitmq"
 
+	currencyfeature "ktravels-publicsite-api/internal/features/currency"
+	curapp "ktravels-publicsite-api/internal/features/currency/application"
+	exchangeratefeature "ktravels-publicsite-api/internal/features/exchange_rate"
+	erapp "ktravels-publicsite-api/internal/features/exchange_rate/application"
+	erinfra "ktravels-publicsite-api/internal/features/exchange_rate/infrastructure"
 	providersvc "ktravels-publicsite-api/internal/features/provider_service"
+	sharedcurrency "ktravels-publicsite-api/internal/shared/currency"
 )
 
 func main() {
@@ -54,6 +60,12 @@ func main() {
 	}
 	defer rabbitClient.Close()
 
+	rateCache := erapp.NewRateCache()
+	currencyCache := curapp.NewCurrencyCache()
+	_ = sharedcurrency.NewCurrencyConverter(rateCache, currencyCache)
+
+	erRepo := erinfra.NewMongoRepository(db.Database())
+
 	deps := features.Deps{
 		RabbitMQ: rabbitClient,
 		Log:      log,
@@ -61,6 +73,8 @@ func main() {
 
 	featureList := []features.Feature{
 		providersvc.NewFeature(db.Database()),
+		exchangeratefeature.NewFeature(db.Database(), rateCache),
+		currencyfeature.NewFeature(db.Database(), currencyCache),
 	}
 
 	for _, f := range featureList {
@@ -74,7 +88,9 @@ func main() {
 
 	addr := fmt.Sprintf(":%d", cfg.App.Port)
 	gqlHandler := gqlserver.NewHandler(
-		graph.NewExecutableSchema(graph.Config{Resolvers: &graph.Resolver{}}),
+		graph.NewExecutableSchema(graph.Config{Resolvers: &graph.Resolver{
+			ExchangeRateRepo: erRepo,
+		}}),
 		cfg.GraphQL.PlaygroundEnabled,
 	)
 	server := &http.Server{

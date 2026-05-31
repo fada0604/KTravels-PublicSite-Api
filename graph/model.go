@@ -2,6 +2,32 @@
 
 package graph
 
+import (
+	"time"
+)
+
+type ExchangeRate struct {
+	ID           string    `json:"id"`
+	CurrencyFrom string    `json:"currencyFrom"`
+	CurrencyTo   string    `json:"currencyTo"`
+	Rate         float64   `json:"rate"`
+	Source       string    `json:"source"`
+	ValidFrom    time.Time `json:"validFrom"`
+	Timestamp    time.Time `json:"timestamp"`
+}
+
+type ExchangeRatePage struct {
+	Items       []*ExchangeRate `json:"items"`
+	TotalCount  int             `json:"totalCount"`
+	HasNextPage bool            `json:"hasNextPage"`
+}
+
+type Money struct {
+	Price    float64 `json:"price"`
+	Currency string  `json:"currency"`
+	Symbol   string  `json:"symbol"`
+}
+
 type Mutation struct {
 }
 
