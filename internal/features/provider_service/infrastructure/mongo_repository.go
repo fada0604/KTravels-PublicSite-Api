@@ -2,14 +2,15 @@ package infrastructure
 
 import (
 	"context"
+	"errors"
 	"fmt"
-	"log"
 
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
 
 	"ktravels-publicsite-api/internal/features/provider_service/domain"
+	sharederrors "ktravels-publicsite-api/internal/shared/errors"
 )
 
 const collectionName = "provider_services"
@@ -25,29 +26,25 @@ func NewMongoRepository(db *mongo.Database) *MongoRepository {
 }
 
 func (r *MongoRepository) Upsert(ctx context.Context, service *domain.ProviderService) error {
-	filter := map[string]interface{}{"_id": service.ID}
+	doc := toDocument(service)
+	filter := bson.M{"_id": doc.ID}
 	opts := options.Replace().SetUpsert(true)
 
-	_, err := r.collection.ReplaceOne(ctx, filter, service, opts)
+	_, err := r.collection.ReplaceOne(ctx, filter, doc, opts)
 	if err != nil {
-		log.Printf("Failed to upsert %s: %v", service.ID, err)
-		return err
+		return fmt.Errorf("failed to upsert provider service %s: %w", service.ID, err)
 	}
 
 	return nil
 }
 
 func (r *MongoRepository) UpdateStatus(ctx context.Context, id string, status int) error {
-	filter := map[string]interface{}{"_id": id}
-	update := map[string]interface{}{
-		"$set": map[string]interface{}{
-			"status": status,
-		},
-	}
+	filter := bson.M{"_id": id}
+	update := bson.M{"$set": bson.M{"status": status}}
 
 	_, err := r.collection.UpdateOne(ctx, filter, update)
 	if err != nil {
-		return fmt.Errorf("update error: %w", err)
+		return fmt.Errorf("failed to update status for provider service %s: %w", id, err)
 	}
 
 	return nil
@@ -58,17 +55,9 @@ func (r *MongoRepository) UpdateProviderLogo(ctx context.Context, providerID str
 
 	var update bson.M
 	if logo == nil {
-		update = bson.M{
-			"$unset": bson.M{
-				"provider_logo": 1,
-			},
-		}
+		update = bson.M{"$unset": bson.M{"provider_logo": 1}}
 	} else {
-		update = bson.M{
-			"$set": bson.M{
-				"provider_logo": logo,
-			},
-		}
+		update = bson.M{"$set": bson.M{"provider_logo": toImageDocument(*logo)}}
 	}
 
 	_, err := r.collection.UpdateMany(ctx, filter, update)
@@ -84,17 +73,9 @@ func (r *MongoRepository) UpdateUnitImages(ctx context.Context, unitID string, i
 
 	var update bson.M
 	if images == nil {
-		update = bson.M{
-			"$unset": bson.M{
-				"units.$.images": 1,
-			},
-		}
+		update = bson.M{"$unset": bson.M{"units.$.images": 1}}
 	} else {
-		update = bson.M{
-			"$set": bson.M{
-				"units.$.images": images,
-			},
-		}
+		update = bson.M{"$set": bson.M{"units.$.images": toImageDocuments(images)}}
 	}
 
 	_, err := r.collection.UpdateMany(ctx, filter, update)
@@ -114,4 +95,19 @@ func (r *MongoRepository) Delete(ctx context.Context, id string) error {
 	}
 
 	return nil
+}
+
+func (r *MongoRepository) FindByID(ctx context.Context, id string) (*domain.ProviderService, error) {
+	filter := bson.M{"_id": id}
+
+	var doc ProviderServiceDocument
+	err := r.collection.FindOne(ctx, filter).Decode(&doc)
+	if err != nil {
+		if errors.Is(err, mongo.ErrNoDocuments) {
+			return nil, fmt.Errorf("%w: provider service %s", sharederrors.ErrNotFound, id)
+		}
+		return nil, fmt.Errorf("failed to find provider service %s: %w", id, err)
+	}
+
+	return fromDocument(&doc), nil
 }

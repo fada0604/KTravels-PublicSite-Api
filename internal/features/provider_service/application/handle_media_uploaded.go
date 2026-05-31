@@ -9,21 +9,10 @@ import (
 	sharederrors "ktravels-publicsite-api/internal/shared/errors"
 )
 
-const (
-	EntityAssociatedProviderDigitalIdentity  = "ProviderDigitalIdentity"
-	EntityAssociatedServiceDistributionUnit   = "ServiceDistributionUnit"
-)
-
-type mediaUploadedMessage struct {
-	MessageIdentifier string `json:"MessageIdentifier"`
-	Name              string `json:"Name"`
-	Data              string `json:"Data"`
-}
-
 type mediaData struct {
-	EntityAssociatedID string       `json:"entity_associated_id"`
-	EntityAssociated   string       `json:"entity_associated"`
-	Medias             []mediaItem  `json:"medias"`
+	EntityAssociatedID string      `json:"entity_associated_id"`
+	EntityAssociated   string      `json:"entity_associated"`
+	Medias             []mediaItem `json:"medias"`
 }
 
 type mediaItem struct {
@@ -36,18 +25,14 @@ type mediaItem struct {
 	EntityAssociated   string `json:"entity_associated"`
 }
 
-func HandleMediaUploaded(ctx context.Context, repo domain.Repository, body []byte) error {
-	var msg mediaUploadedMessage
-	if err := json.Unmarshal(body, &msg); err != nil {
-		return fmt.Errorf("%w: failed to parse message envelope: %w", sharederrors.ErrInvalidInput, err)
-	}
-
-	if msg.Data == "" {
-		return fmt.Errorf("%w: empty data field", sharederrors.ErrInvalidInput)
+func HandleMediaUploaded(ctx context.Context, repo domain.WriteRepository, body []byte) error {
+	env, err := UnmarshalEnvelope(body)
+	if err != nil {
+		return err
 	}
 
 	var data mediaData
-	if err := json.Unmarshal([]byte(msg.Data), &data); err != nil {
+	if err := json.Unmarshal([]byte(env.Data), &data); err != nil {
 		return fmt.Errorf("%w: failed to parse media data: %w", sharederrors.ErrInvalidInput, err)
 	}
 
@@ -55,28 +40,22 @@ func HandleMediaUploaded(ctx context.Context, repo domain.Repository, body []byt
 		return fmt.Errorf("%w: entity_associated_id is required", sharederrors.ErrInvalidInput)
 	}
 
-	switch data.EntityAssociated {
-	case EntityAssociatedProviderDigitalIdentity:
+	switch domain.EntityAssociation(data.EntityAssociated) {
+	case domain.EntityAssociationProviderIdentity:
 		var image *domain.Image
 		if len(data.Medias) > 0 {
-			firstMedia := data.Medias[0]
-			image = &domain.Image{
-				Name: firstMedia.Name,
-				URL:  firstMedia.URL,
-			}
+			first := data.Medias[0]
+			image = &domain.Image{Name: first.Name, URL: first.URL}
 		}
 		if err := repo.UpdateProviderLogo(ctx, data.EntityAssociatedID, image); err != nil {
 			return fmt.Errorf("failed to update provider logo for provider_id %s: %w", data.EntityAssociatedID, err)
 		}
-	case EntityAssociatedServiceDistributionUnit:
+	case domain.EntityAssociationServiceUnit:
 		var images []domain.Image
 		if len(data.Medias) > 0 {
 			images = make([]domain.Image, len(data.Medias))
 			for i, m := range data.Medias {
-				images[i] = domain.Image{
-					Name: m.Name,
-					URL:  m.URL,
-				}
+				images[i] = domain.Image{Name: m.Name, URL: m.URL}
 			}
 		}
 		if err := repo.UpdateUnitImages(ctx, data.EntityAssociatedID, images); err != nil {

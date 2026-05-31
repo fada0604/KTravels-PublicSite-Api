@@ -1,31 +1,23 @@
 package graphql
 
 import (
-	"fmt"
+	"net/http"
+
+	gqlcore "github.com/99designs/gqlgen/graphql"
+	"github.com/99designs/gqlgen/graphql/handler"
+	"github.com/99designs/gqlgen/graphql/playground"
 )
 
-type Server struct {
-	port                int
-	enablePlayground    bool
-	enableIntrospection bool
-}
+// NewHandler returns an http.Handler that serves the GraphQL endpoint at /query
+// and, when enabled, the GraphQL Playground at /.
+func NewHandler(schema gqlcore.ExecutableSchema, playgroundEnabled bool) http.Handler {
+	srv := handler.NewDefaultServer(schema)
 
-func New(port int) *Server {
-	return &Server{
-		port:                port,
-		enablePlayground:    true,
-		enableIntrospection: true,
+	mux := http.NewServeMux()
+	mux.Handle("/query", srv)
+	if playgroundEnabled {
+		mux.Handle("/", playground.Handler("GraphQL Playground", "/query"))
 	}
-}
 
-func (s *Server) EnablePlayground(enabled bool) {
-	s.enablePlayground = enabled
-}
-
-func (s *Server) EnableIntrospection(enabled bool) {
-	s.enableIntrospection = enabled
-}
-
-func (s *Server) Address() string {
-	return fmt.Sprintf(":%d", s.port)
+	return mux
 }

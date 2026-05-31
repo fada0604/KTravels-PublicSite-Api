@@ -9,14 +9,15 @@ import (
 	"syscall"
 	"time"
 
+	"ktravels-publicsite-api/graph"
+	"ktravels-publicsite-api/internal/features"
 	"ktravels-publicsite-api/internal/platform/config"
 	"ktravels-publicsite-api/internal/platform/database"
+	gqlserver "ktravels-publicsite-api/internal/platform/graphql"
 	"ktravels-publicsite-api/internal/platform/logger"
 	rmq "ktravels-publicsite-api/internal/platform/rabbitmq"
 
-	psapp "ktravels-publicsite-api/internal/features/provider_service/application"
-	psinfra "ktravels-publicsite-api/internal/features/provider_service/infrastructure"
-	psrmq "ktravels-publicsite-api/internal/features/provider_service/delivery/rabbitmq"
+	providersvc "ktravels-publicsite-api/internal/features/provider_service"
 )
 
 func main() {
@@ -53,58 +54,32 @@ func main() {
 	}
 	defer rabbitClient.Close()
 
-	repo := psinfra.NewMongoRepository(db.Database())
-
-	publishedHandler := func(ctx context.Context, body []byte) error {
-		return psapp.HandlePublished(ctx, repo, body)
+	deps := features.Deps{
+		RabbitMQ: rabbitClient,
+		Log:      log,
 	}
 
-	if err := psrmq.SetupAndConsume(ctx, rabbitClient, publishedHandler, psrmq.PublishedQueueName, psrmq.PublishedRoutingKey, log); err != nil {
-		log.Error().Err(err).Str("operation", "RabbitMQ.Consume.Published").Msg("failed to setup consumer")
-		os.Exit(1)
+	featureList := []features.Feature{
+		providersvc.NewFeature(db.Database()),
 	}
 
-	unpublishedHandler := func(ctx context.Context, body []byte) error {
-		return psapp.HandleUnpublished(ctx, repo, body)
-	}
-
-	if err := psrmq.SetupAndConsume(ctx, rabbitClient, unpublishedHandler, psrmq.UnpublishedQueueName, psrmq.UnpublishedRoutingKey, log); err != nil {
-		log.Error().Err(err).Str("operation", "RabbitMQ.Consume.Unpublished").Msg("failed to setup consumer")
-		os.Exit(1)
-	}
-
-	updatedHandler := func(ctx context.Context, body []byte) error {
-		return psapp.HandleUpdated(ctx, repo, body)
-	}
-
-	if err := psrmq.SetupAndConsume(ctx, rabbitClient, updatedHandler, psrmq.UpdatedQueueName, psrmq.UpdatedRoutingKey, log); err != nil {
-		log.Error().Err(err).Str("operation", "RabbitMQ.Consume.Updated").Msg("failed to setup consumer")
-		os.Exit(1)
-	}
-
-	mediaUploadedHandler := func(ctx context.Context, body []byte) error {
-		return psapp.HandleMediaUploaded(ctx, repo, body)
-	}
-
-	if err := psrmq.SetupAndConsume(ctx, rabbitClient, mediaUploadedHandler, psrmq.MediaUploadedQueueName, psrmq.MediaUploadedRoutingKey, log); err != nil {
-		log.Error().Err(err).Str("operation", "RabbitMQ.Consume.MediaUploaded").Msg("failed to setup consumer")
-		os.Exit(1)
-	}
-
-	deletedHandler := func(ctx context.Context, body []byte) error {
-		return psapp.HandleDeleted(ctx, repo, body)
-	}
-
-	if err := psrmq.SetupAndConsume(ctx, rabbitClient, deletedHandler, psrmq.DeletedQueueName, psrmq.DeletedRoutingKey, log); err != nil {
-		log.Error().Err(err).Str("operation", "RabbitMQ.Consume.Deleted").Msg("failed to setup consumer")
-		os.Exit(1)
+	for _, f := range featureList {
+		if err := f.Register(ctx, deps); err != nil {
+			log.Error().Err(err).Str("operation", "Feature.Register").Msg("failed to register feature")
+			os.Exit(1)
+		}
 	}
 
 	log.Info().Str("operation", "App.Start").Str("environment", cfg.App.Env).Msg("starting application")
 
 	addr := fmt.Sprintf(":%d", cfg.App.Port)
+	gqlHandler := gqlserver.NewHandler(
+		graph.NewExecutableSchema(graph.Config{Resolvers: &graph.Resolver{}}),
+		cfg.GraphQL.PlaygroundEnabled,
+	)
 	server := &http.Server{
 		Addr:         addr,
+		Handler:      gqlHandler,
 		ReadTimeout:  15 * time.Second,
 		WriteTimeout: 10 * time.Second,
 		IdleTimeout:  60 * time.Second,

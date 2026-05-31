@@ -9,28 +9,18 @@ import (
 	sharederrors "ktravels-publicsite-api/internal/shared/errors"
 )
 
-type deletedMessage struct {
-	MessageIdentifier string `json:"MessageIdentifier"`
-	Name              string `json:"Name"`
-	Data              string `json:"Data"`
-}
-
 type deletedData struct {
 	ProviderServiceID string `json:"provider_service_id"`
 }
 
-func HandleDeleted(ctx context.Context, repo domain.Repository, body []byte) error {
-	var msg deletedMessage
-	if err := json.Unmarshal(body, &msg); err != nil {
-		return fmt.Errorf("%w: failed to parse message envelope: %w", sharederrors.ErrInvalidInput, err)
-	}
-
-	if msg.Data == "" {
-		return fmt.Errorf("%w: empty data field", sharederrors.ErrInvalidInput)
+func HandleDeleted(ctx context.Context, repo domain.WriteRepository, body []byte) error {
+	env, err := UnmarshalEnvelope(body)
+	if err != nil {
+		return err
 	}
 
 	var data deletedData
-	if err := json.Unmarshal([]byte(msg.Data), &data); err != nil {
+	if err := json.Unmarshal([]byte(env.Data), &data); err != nil {
 		return fmt.Errorf("%w: failed to parse delete data: %w", sharederrors.ErrInvalidInput, err)
 	}
 

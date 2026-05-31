@@ -159,6 +159,22 @@ func (c *Client) DeclareQueue(name string) (amqp.Queue, error) {
 	)
 }
 
+// DeclareQueueWithDLX declares a durable queue that routes rejected messages to dlxExchange.
+// Dead letters are routed with the queue's own name as the routing key.
+func (c *Client) DeclareQueueWithDLX(name, dlxExchange string) (amqp.Queue, error) {
+	return c.channel.QueueDeclare(
+		name,
+		true,
+		false,
+		false,
+		false,
+		amqp.Table{
+			"x-dead-letter-exchange":    dlxExchange,
+			"x-dead-letter-routing-key": name,
+		},
+	)
+}
+
 func (c *Client) BindQueue(queue, exchange, routingKey string) error {
 	return c.channel.QueueBind(
 		queue,

@@ -28,6 +28,11 @@ go.work.sum
 build/
 dist/
 
+graph/generated.go
+
+# IA folders and files
 .opencode/
 openspec/
-graph/generated.go
+.agents/
+.agent/
+.claude/

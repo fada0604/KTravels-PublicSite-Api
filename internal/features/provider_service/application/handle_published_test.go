@@ -45,7 +45,7 @@ func (m *mockRepo) Delete(ctx context.Context, id string) error {
 
 func buildMessage(data *domain.ProviderService) []byte {
 	dataJSON, _ := json.Marshal(data)
-	msg := map[string]interface{}{
+	msg := map[string]any{
 		"MessageIdentifier": "test-msg-id",
 		"Name":              "ProviderServicePublished",
 		"Data":              string(dataJSON),
@@ -95,7 +95,7 @@ func validService() *domain.ProviderService {
 				Name:      "Test Unit",
 				Capacity:  1,
 				Quantity:  1,
-				Amenities: []interface{}{},
+				Amenities: []any{},
 				Images: []domain.Image{
 					{Name: "img.png", URL: "https://example.com/img.png"},
 				},
@@ -120,7 +120,7 @@ func validService() *domain.ProviderService {
 	}
 }
 
-func TestHandlePublished_Success(t *testing.T) {
+func TestHandleUpsert_Success(t *testing.T) {
 	repo := new(mockRepo)
 	svc := validService()
 	body := buildMessage(svc)
@@ -129,67 +129,67 @@ func TestHandlePublished_Success(t *testing.T) {
 		return s.ID == svc.ID && s.Title == svc.Title
 	})).Return(nil)
 
-	err := application.HandlePublished(context.Background(), repo, body)
+	err := application.HandleUpsert(context.Background(), repo, body)
 	assert.NoError(t, err)
 	repo.AssertExpectations(t)
 }
 
-func TestHandlePublished_InvalidEnvelopeJSON(t *testing.T) {
+func TestHandleUpsert_InvalidEnvelopeJSON(t *testing.T) {
 	repo := new(mockRepo)
 
-	err := application.HandlePublished(context.Background(), repo, []byte("not-json"))
+	err := application.HandleUpsert(context.Background(), repo, []byte("not-json"))
 	require.Error(t, err)
 	assert.ErrorIs(t, err, sharederrors.ErrInvalidInput)
 }
 
-func TestHandlePublished_EmptyData(t *testing.T) {
+func TestHandleUpsert_EmptyData(t *testing.T) {
 	repo := new(mockRepo)
-	msg := map[string]interface{}{
+	msg := map[string]any{
 		"MessageIdentifier": "test",
 		"Name":              "ProviderServicePublished",
 		"Data":              "",
 	}
 	body, _ := json.Marshal(msg)
 
-	err := application.HandlePublished(context.Background(), repo, body)
+	err := application.HandleUpsert(context.Background(), repo, body)
 	require.Error(t, err)
 	assert.ErrorIs(t, err, sharederrors.ErrInvalidInput)
 }
 
-func TestHandlePublished_InvalidDataJSON(t *testing.T) {
+func TestHandleUpsert_InvalidDataJSON(t *testing.T) {
 	repo := new(mockRepo)
-	msg := map[string]interface{}{
+	msg := map[string]any{
 		"MessageIdentifier": "test",
 		"Name":              "ProviderServicePublished",
 		"Data":              "not-json",
 	}
 	body, _ := json.Marshal(msg)
 
-	err := application.HandlePublished(context.Background(), repo, body)
+	err := application.HandleUpsert(context.Background(), repo, body)
 	require.Error(t, err)
 	assert.ErrorIs(t, err, sharederrors.ErrInvalidInput)
 }
 
-func TestHandlePublished_EmptyProviderServiceID(t *testing.T) {
+func TestHandleUpsert_EmptyProviderServiceID(t *testing.T) {
 	repo := new(mockRepo)
 	svc := validService()
 	svc.ID = ""
 	body := buildMessage(svc)
 
-	err := application.HandlePublished(context.Background(), repo, body)
+	err := application.HandleUpsert(context.Background(), repo, body)
 	require.Error(t, err)
 	assert.ErrorIs(t, err, sharederrors.ErrInvalidInput)
 	assert.Contains(t, err.Error(), "provider_service_id")
 }
 
-func TestHandlePublished_RepoError(t *testing.T) {
+func TestHandleUpsert_RepoError(t *testing.T) {
 	repo := new(mockRepo)
 	svc := validService()
 	body := buildMessage(svc)
 
 	repo.On("Upsert", mock.Anything, mock.Anything).Return(assert.AnError)
 
-	err := application.HandlePublished(context.Background(), repo, body)
+	err := application.HandleUpsert(context.Background(), repo, body)
 	require.Error(t, err)
 	repo.AssertExpectations(t)
 }

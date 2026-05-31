@@ -13,22 +13,23 @@ import (
 
 const (
 	EXCHANGE_NAME = "ktravels.backoffice.api.exchange"
+	DLX_EXCHANGE  = "ktravels.publicsite.api.dlx"
 )
 
 const (
-	PublishedQueueName   = "provider_service_published"
-	PublishedRoutingKey  = "provider_service_published"
+	PublishedQueueName  = "provider_service_published"
+	PublishedRoutingKey = "provider_service_published"
 
-	UnpublishedQueueName = "provider_service_unpublished"
+	UnpublishedQueueName  = "provider_service_unpublished"
 	UnpublishedRoutingKey = "provider_service_unpublished"
 
-	UpdatedQueueName   = "provider_service_updated"
-	UpdatedRoutingKey  = "provider_service_updated"
+	UpdatedQueueName  = "provider_service_updated"
+	UpdatedRoutingKey = "provider_service_updated"
 
 	MediaUploadedQueueName  = "media_uploaded"
 	MediaUploadedRoutingKey = "media_uploaded"
 
-	DeletedQueueName   = "provider_service_deleted"
+	DeletedQueueName  = "provider_service_deleted"
 	DeletedRoutingKey = "provider_service_deleted"
 )
 
@@ -39,7 +40,20 @@ func SetupAndConsume(ctx context.Context, client *rabbitmqclient.Client, handler
 		return fmt.Errorf("failed to declare exchange %s: %w", EXCHANGE_NAME, err)
 	}
 
-	q, err := client.DeclareQueue(queueName)
+	if err := client.DeclareDirectExchange(DLX_EXCHANGE); err != nil {
+		return fmt.Errorf("failed to declare DLX exchange %s: %w", DLX_EXCHANGE, err)
+	}
+
+	dlqName := queueName + ".dlq"
+	dlq, err := client.DeclareQueue(dlqName)
+	if err != nil {
+		return fmt.Errorf("failed to declare DLQ %s: %w", dlqName, err)
+	}
+	if err := client.BindQueue(dlq.Name, DLX_EXCHANGE, queueName); err != nil {
+		return fmt.Errorf("failed to bind DLQ %s to DLX: %w", dlqName, err)
+	}
+
+	q, err := client.DeclareQueueWithDLX(queueName, DLX_EXCHANGE)
 	if err != nil {
 		return fmt.Errorf("failed to declare queue %s: %w", queueName, err)
 	}
@@ -47,12 +61,6 @@ func SetupAndConsume(ctx context.Context, client *rabbitmqclient.Client, handler
 	if err := client.BindQueue(q.Name, EXCHANGE_NAME, routingKey); err != nil {
 		return fmt.Errorf("failed to bind queue %s: %w", queueName, err)
 	}
-
-	// log.Info().
-	// 	Str("exchange", EXCHANGE_NAME).
-	// 	Str("queue", queueName).
-	// 	Str("routingKey", routingKey).
-	// 	Msg("RabbitMQ consumer setup complete, starting consume")
 
 	return client.Consume(ctx, queueName, func(msg amqp.Delivery) {
 		msgCtx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
@@ -63,8 +71,8 @@ func SetupAndConsume(ctx context.Context, client *rabbitmqclient.Client, handler
 				Err(err).
 				Str("messageId", msg.MessageId).
 				Str("queue", queueName).
-				Msg("failed to handle provider service message")
-			if nackErr := msg.Nack(false, true); nackErr != nil {
+				Msg("failed to handle message, routing to DLQ")
+			if nackErr := msg.Nack(false, false); nackErr != nil {
 				log.Error().Err(nackErr).Msg("failed to nack message")
 			}
 			return
